@@ -1,0 +1,71 @@
+import sys
+import os
+import logging
+
+def check_dependencies():
+    try:
+        import pdf2docx
+        import docx
+    except ImportError:
+        print("Required dependencies not found. Installing...")
+        try:
+            subprocess.run(["pip", "install", "pdf2docx", "python-docx"])
+            print("Dependencies installed successfully.")
+        except Exception as e:
+            print(f"Error installing dependencies: {str(e)}")
+            sys.exit(1)
+
+def convert_pdf_to_docx_with_images(pdf_path, docx_path):
+    try:
+        check_dependencies()
+
+        # Importing the libraries after checking for dependencies
+        import pdf2docx
+        from docx import Document
+        from docx.shared import Inches
+
+        # Create a DOCX document
+        doc = Document()
+
+        # Convert PDF to DOCX and append paragraphs and images
+        cv = pdf2docx.Converter(pdf_path)
+        cv.convert(docx_path, start=0, end=None)
+        cv.close()
+
+        # Iterate through paragraphs and images and add them to the DOCX document
+        for paragraph in doc.paragraphs:
+            doc.add_paragraph(paragraph.text)
+
+        for image_path in cv.image_list:
+            doc.add_picture(image_path, width=Inches(4))  # Adjust width as needed
+
+        doc.save(docx_path)
+        logging.info(f"PDF content converted to DOCX and images added: {docx_path}")
+
+    except Exception as e:
+        logging.error(f"Error converting PDF to DOCX with images: {str(e)}")
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
+    if len(sys.argv) < 2:
+        print("Please drag and drop a PDF file onto the script.")
+        sys.exit(1)
+
+    input_pdf_path = sys.argv[1]
+
+    # Extracting the root filename without extension
+    root_filename = os.path.splitext(os.path.basename(input_pdf_path))[0]
+
+    # Creating the output filename with the root filename and a tag
+    output_docx_path = f"{root_filename}_extracted.docx"
+
+    if not input_pdf_path.lower().endswith('.pdf'):
+        print("Please provide a valid PDF file.")
+        sys.exit(1)
+
+    if not os.path.isfile(input_pdf_path):
+        print(f"The file '{input_pdf_path}' does not exist.")
+        sys.exit(1)
+
+    convert_pdf_to_docx_with_images(input_pdf_path, output_docx_path)
